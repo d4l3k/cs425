@@ -1,6 +1,14 @@
 # CPSC 425: Assignment 3: Face Detection in a Scaled Representation
 Tristan Rice, q7w9a, 25886145
 
+2016-02-02
+
+I found out that my original submission of hw3 didn't have enough comments after
+turning it in and getting my hw2 back. So I'm using 1 late day to resubmit this
+assignment.
+
+Please ignore the original submission.
+
 ## 3. ShowPyramid
 
 ![](output/pyramid.jpg)\
