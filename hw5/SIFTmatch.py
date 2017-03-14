@@ -2,6 +2,9 @@ from PIL import Image, ImageDraw
 import numpy as np
 import csv
 import math
+import random
+
+random.seed()
 
 def ReadKeys(image):
     """Input an image and its associated SIFT keypoints.
@@ -26,7 +29,7 @@ def ReadKeys(image):
     keypoints = []
     descriptors = []
     first = True
-    with open(image+'.key','rb') as f:
+    with open(image+'.key','r') as f:
         reader = csv.reader(f, delimiter=' ', quoting=csv.QUOTE_NONNUMERIC,skipinitialspace = True)
         descriptor = []
         for row in reader:
@@ -48,7 +51,7 @@ def ReadKeys(image):
                 descriptors.append(descriptor)
                 descriptor = []
     assert len(keypoints) == count, "Incorrect total number of keypoints read."
-    print "Number of keypoints read:", int(count)
+    print("Number of keypoints read:", int(count))
     return [im,keypoints,descriptors]
 
 def AppendImages(im1, im2):
@@ -83,31 +86,91 @@ def DisplayMatches(im1, im2, matched_pairs):
 
 def match(image1,image2):
     """Input two images and their associated SIFT keypoints.
-    Display lines connecting the first 5 keypoints from each image.
-    Note: These 5 are not correct matches, just randomly chosen points.
+    Display lines connecting the best matching pairs.
 
     The arguments image1 and image2 are file names without file extensions.
 
-    Returns the number of matches displayed.
+    Returns the rendered image.
 
     Example: match('scene','book')
     """
     im1, keypoints1, descriptors1 = ReadKeys(image1)
     im2, keypoints2, descriptors2 = ReadKeys(image2)
-    #
-    # REPLACE THIS CODE WITH YOUR SOLUTION (ASSIGNMENT 5, QUESTION 3)
-    #
-    #Generate five random matches (for testing purposes)
+
+    # List to store the matched pairs.
     matched_pairs = []
-    num = 5
-    for i in range(num):
-        matched_pairs.append([keypoints1[i],keypoints2[i]])
-    #
-    # END OF SECTION OF CODE TO REPLACE
-    #
-    im3 = DisplayMatches(im1, im2, matched_pairs)
+
+    # For each point in the second image compute the best matching point.
+    for k2, d2 in zip(keypoints2, descriptors2):
+        angles = []
+        for k1, d1 in zip(keypoints1, descriptors1):
+            # Compute the angle between the two points descriptors and add it to
+            # the angles list.
+            angles.append(math.acos(np.sum(np.array(d1)*np.array(d2))))
+
+        # Calculate the two smallest angles.
+        smallest, second = sorted(angles)[0:2]
+        # Check if the ratio is below the threshold.
+        if smallest/second < 0.7:
+            # Since it's below the threshold, find the keypoint and add it to
+            # the list of matched pairs.
+            k1 = keypoints1[angles.index(smallest)]
+            matched_pairs.append([k1, k2])
+
+    # Apply RANSAC to minimize bad matches.
+
+    # Shorthand variable.
+    tau = math.pi*2 #
+
+    # Thresholds for angle and size.
+    angleThreshold = math.pi/40 # 14deg
+    sizeThreshold = 0.10 # 10%
+
+    # Array to store the largest consistent set.
+    bestFound = []
+
+    # Sample 10 points without replacement to check for points that are
+    # consistent with.
+    for [k1, k2] in random.sample(matched_pairs, 10):
+        # Compute the difference in size and angle between the first matched
+        # pair.
+        angle = (k1[3] - k2[3]) % tau
+        size = (k1[2] / k2[2])
+
+        consistent = []
+        for [k3, k4] in matched_pairs:
+            # Compute the difference in size and angle between the second
+            # matched pair.
+            angle2 = (k3[3] - k4[3]) % tau
+            size2 = (k3[2] / k4[2])
+
+            # Compute the difference in angle differences of the two pairs.
+            angleDiff = (angle-angle2) % tau
+
+            # If angle is larger than PI subtract PI since the maximum distance
+            # two angles can be apart is PI.
+            if angleDiff > math.pi:
+                angleDiff -= math.pi
+
+            # Compute the difference in size differences of the two pairs.
+            sizeDiff = abs(size - size2)
+
+            print(angleDiff, sizeDiff)
+
+            # If the two pairs are consistent according to the thresholds add
+            # them to the consistent list.
+            if angleDiff <= angleThreshold and sizeDiff <= sizeThreshold:
+                consistent.append([k3, k4])
+
+        # If this consistent set is larger than any of the previous, make it the
+        # new best found set.
+        if len(consistent) > len(bestFound):
+            bestFound = consistent
+
+
+    im3 = DisplayMatches(im1, im2, bestFound)
     return im3
 
 #Test run...
-match('scene','basmati')
+match('library2','library')
 
