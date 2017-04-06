@@ -80,7 +80,6 @@ color_costs = np.zeros( len(nbins) );
 
 # === GRAY HISTOGRAMS ===
 for i, n in enumerate(nbins):
-    print("====== Gray", n, "======")
     # Compute the gray histograms.
     # Needs to be converted to np.double to use kmeans.
     hist = compute_gray_histograms(grays, n).astype(np.double)
@@ -132,7 +131,10 @@ fdiffs = np.zeros( nframes )
 # For each frame from 0 to nframes-1, compute the sum of the pairwise
 # differences between the next frame and current frame.
 for i in range(nframes-1):
-    fdiffs[i] = np.sum(grays[i+1]-grays[i])
+    # We need to convert the grays to be int16 instead of uint8 to avoid
+    # overflows.
+    fdiffs[i] = np.sum(np.abs(np.subtract(grays[i+1].astype(np.int16),
+                                          grays[i].astype(np.int16))))
 
 plt.figure(4)
 plt.xlabel('Frame number')
@@ -148,7 +150,7 @@ sqdiffs = np.zeros( nframes )
 # For each frame from 0 to nframes-1, compute the sum of the squared pairwise
 # differences between the next frame and current frame.
 for i in range(nframes-1):
-    sqdiffs[i] = np.sum((grays[i+1]-grays[i])**2)
+    sqdiffs[i] = np.sum((grays[i+1].astype(np.int16)-grays[i].astype(np.int16))**2)
 
 plt.figure(5)
 plt.xlabel('Frame number')
@@ -164,7 +166,7 @@ avgdiffs = np.zeros( nframes )
 # For each frame from 0 to nframes-1, compute the difference in mean pixel value
 # between the next frame and current frame.
 for i in range(nframes-1):
-    avgdiffs[i] = np.mean(grays[i+1])-np.mean(grays[i])
+    avgdiffs[i] = np.mean(grays[i+1].astype(np.int16))-np.mean(grays[i].astype(np.int16))
 
 plt.figure(6)
 plt.xlabel('Frame number')

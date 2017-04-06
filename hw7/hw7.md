@@ -5,33 +5,50 @@ Tristan Rice, 25886145, q7w9a
 
 ![](./gray_histogram.png)\
 
+
 ## 4.
 
 ![](./colour_histogram.png)\
+
 
 ## 5.
 
 ![](./absolute_frame_diff.png)\
 
+
 ## 6.
 
 ![](./squared_frame_diff.png)\
+
 
 ## 7.
 
 ![](./average_frame_diff.png)\
 
+
 ## 8.
 
 ![](./histogram_frame_diff.png)\
 
+
 ## 9. Which frame difference method is better? Why?
 
-TODO
+Absolute frame differences, squared frame differences, average gray frame
+differences, and histogram frame differences all appear to be fairly good. The
+only issue is that for gray frame differences you'd have to take the absolute
+value since the value can be negative.
+
+Squared frame difference seems to be a bit better than absolute frame difference
+as the peaks between shots are slightly higher than those in between.
 
 ## 10. We worked with shots without camera movement. Which of our six methods do you think would work best if the camera were slowly moving instead of static? Why?
 
-TODO
+I think that color histograms and clustering would work best for a slowly moving
+camera. Since it's taking the histogram it would be more resilient to per pixel
+changes unlike the direct pixel by pixel differences. Clustering I believe would
+also be more effective than just comparing the histograms between two pixels
+since it's a more holistic approach, and would be able to take into account
+things like panning something out of a shot and then back in.
 
 ## Code
 
@@ -120,7 +137,6 @@ color_costs = np.zeros( len(nbins) );
 
 # === GRAY HISTOGRAMS ===
 for i, n in enumerate(nbins):
-    print("====== Gray", n, "======")
     # Compute the gray histograms.
     # Needs to be converted to np.double to use kmeans.
     hist = compute_gray_histograms(grays, n).astype(np.double)
@@ -172,7 +188,10 @@ fdiffs = np.zeros( nframes )
 # For each frame from 0 to nframes-1, compute the sum of the pairwise
 # differences between the next frame and current frame.
 for i in range(nframes-1):
-    fdiffs[i] = np.sum(grays[i+1]-grays[i])
+    # We need to convert the grays to be int16 instead of uint8 to avoid
+    # overflows.
+    fdiffs[i] = np.sum(np.abs(np.subtract(grays[i+1].astype(np.int16),
+                                          grays[i].astype(np.int16))))
 
 plt.figure(4)
 plt.xlabel('Frame number')
@@ -188,7 +207,7 @@ sqdiffs = np.zeros( nframes )
 # For each frame from 0 to nframes-1, compute the sum of the squared pairwise
 # differences between the next frame and current frame.
 for i in range(nframes-1):
-    sqdiffs[i] = np.sum((grays[i+1]-grays[i])**2)
+    sqdiffs[i] = np.sum((grays[i+1].astype(np.int16)-grays[i].astype(np.int16))**2)
 
 plt.figure(5)
 plt.xlabel('Frame number')
@@ -204,7 +223,7 @@ avgdiffs = np.zeros( nframes )
 # For each frame from 0 to nframes-1, compute the difference in mean pixel value
 # between the next frame and current frame.
 for i in range(nframes-1):
-    avgdiffs[i] = np.mean(grays[i+1])-np.mean(grays[i])
+    avgdiffs[i] = np.mean(grays[i+1].astype(np.int16))-np.mean(grays[i].astype(np.int16))
 
 plt.figure(6)
 plt.xlabel('Frame number')
